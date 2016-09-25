@@ -33,11 +33,11 @@ Template.main.onRendered( function(){
 	// create the real time chart
 	var chart = realTimeChart()
 	    .title("Wait Time at KAF")
-	    .yTitle("Number of People in Line")
+      .yTitle("Number of People in Line")
 	    .xTitle("Current Time")
 	    .border(true)
-	    .width(800)
-	    .height(400)
+	    .width(1024)
+	    .height(600)
 	    .barWidth(1)
 	    .initialData(data);
 
@@ -55,19 +55,31 @@ Template.main.onRendered( function(){
 
 	var updateChar = Meteor.setInterval(function(){
 		//var dataPoint = Data.findOne({},{sort: {Date:-1}}).Distance;
-		 var dataPoint = Data.find({},{sort: {Date: -1},limit:1}).map(function(doc){return doc.Distance});
+		var dataPoint = Data.find({},{sort: {Date: -1},limit:1}).map(function(doc){return doc.Distance});
 		var now = new Date();
-	    var obj = {
-	      value: valueScale(dataPoint),
-	      time: now,
-	      color: "green",
-	      ts: now.getTime()
+    var value  = valueScale(dataPoint);
+    
+    //Change color
+    var val = value/4*100;
+    // var h   = Math.floor((100 - val) * 120 / 100);
+    // var s = Math.abs(val - 50)/50;
+    // var v = 1;
+    //var color = hsv2rgb(h,s,v);
+    var color = GreenYellowRed(val);
+
+    var obj = {
+      value: valueScale(dataPoint),
+      time: now,
+      color: "rgb(" + color[0] + "," + color[1] + "," + color[2]+ ")",
+      ts: now.getTime()
 	  };
+
 	  chart.datum(obj);
-      console.log("Updating chart with new sensor data...");
-      console.log(dataPoint);
-   }, 300);
+    //console.log("Updating chart with new sensor data...");
+    //console.log(dataPoint);
+   }, 250);
 });
+
 
 
 
@@ -97,6 +109,24 @@ Template.main.onRendered( function(){
 // 	    .call(chart);
 // 	}
 // });
+
+function GreenYellowRed(val) {
+  val = val - 1; // working with 0-99 will be easier
+
+  if (val < 50) {
+    // green to yellow
+    var r = Math.floor(255 * (val / 50));
+    var g = 255;
+
+  } else {
+    // yellow to red
+    var r = 255;
+    var g = Math.floor(255 * ((50-val % 50) / 50));
+  }
+  var b = 0;
+
+  return [r,g,b];
+}
 
 function realTimeChart() {
 
@@ -201,7 +231,8 @@ function realTimeChart() {
         .text(function(d) { 
           var text = xTitle == undefined ? "" : xTitle;
           return text; 
-        });
+        })
+        .style("font-size","14px");
 
     // in y axis group, add y axis title
     yAxisG.append("text")
@@ -213,7 +244,8 @@ function realTimeChart() {
         .text(function(d) { 
           var text = yTitle == undefined ? "" : yTitle;
           return text; 
-        });
+        })
+        .style("font-size","14px");
 
     // in main group, add chart title
     main.append("text")
@@ -224,7 +256,8 @@ function realTimeChart() {
         .text(function(d) { 
           var text = chartTitle == undefined ? "" : chartTitle;
           return text; 
-        });
+        })
+        .style("font-size","24px");
 
     // define main chart scales
     var x = d3.time.scale().range([0, width]);
@@ -524,3 +557,38 @@ function realTimeChart() {
   return chart;
 
 } // end realTimeChart function
+
+var hsv2rgb = function(h, s, v) {
+  // adapted from http://schinckel.net/2012/01/10/hsv-to-rgb-in-javascript/
+  var rgb, i, data = [];
+  if (s === 0) {
+    rgb = [v,v,v];
+  } else {
+    h = h / 60;
+    i = Math.floor(h);
+    data = [v*(1-s), v*(1-s*(h-i)), v*(1-s*(1-(h-i)))];
+    switch(i) {
+      case 0:
+        rgb = [v, data[2], data[0]];
+        break;
+      case 1:
+        rgb = [data[1], v, data[0]];
+        break;
+      case 2:
+        rgb = [data[0], v, data[2]];
+        break;
+      case 3:
+        rgb = [data[0], data[1], v];
+        break;
+      case 4:
+        rgb = [data[2], data[0], v];
+        break;
+      default:
+        rgb = [v, data[0], data[1]];
+        break;
+    }
+  }
+  return '#' + rgb.map(function(x){
+    return ("0" + Math.round(x*255).toString(16)).slice(-2);
+  }).join('');
+};
